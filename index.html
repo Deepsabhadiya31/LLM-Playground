@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nova Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== 2. DESIGN TOKENS ===== */
+:root{
+  --bg:#0b0d10;--bg2:#101318;--bg3:#161a21;--line:#232932;--line2:#2e3641;
+  --text:#e6e9ee;--dim:#98a2b0;--faint:#667182;
+  --accent:#4cc9e0;--accent2:#2a8fa3;--accent-bg:rgba(76,201,224,.1);
+  --ok:#4ade80;--warn:#fbbf24;--err:#f87171;
+  --r1:6px;--r2:10px;--sp:12px;
+  --font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+  --glow:0 0 24px rgba(76,201,224,.12);
+}
+/* ===== 3. GLOBAL ===== */
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.55 var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* ===== 4. LAYOUT ===== */
+#app{display:grid;grid-template-columns:var(--sbw,248px) 1fr var(--cfw,340px);height:100vh;transition:grid-template-columns .2s}
+#app.sb-collapsed{--sbw:56px}#app.cf-collapsed{--cfw:0px}
+aside{background:var(--bg2);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+#sidebar{border-right:1px solid var(--line)}#config{border-left:1px solid var(--line);overflow-y:auto}
+main{display:flex;flex-direction:column;min-width:0;background:radial-gradient(900px 300px at 50% -80px,rgba(76,201,224,.07),transparent)}
+/* ===== 5. COMPONENTS ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line2);border-radius:var(--r1);background:var(--bg3);transition:.15s;min-height:32px;white-space:nowrap}
+.btn:hover{border-color:var(--accent2);background:#1b212a}
+.btn.primary{background:var(--accent);color:#04181d;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.ghost{border-color:transparent;background:none}.btn.ghost:hover{background:var(--bg3)}
+.btn.danger:hover{border-color:var(--err);color:var(--err)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.brand{display:flex;align-items:center;gap:10px;padding:14px;font-weight:700;letter-spacing:.2px}
+.logo{width:26px;height:26px;border-radius:7px;background:conic-gradient(from 210deg,#4cc9e0,#2a5bd7,#4cc9e0);display:grid;place-items:center;box-shadow:var(--glow);flex:none}
+.logo::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--bg)}
+.sb-sec{padding:6px 10px}
+.sb-title{color:var(--faint);font-size:12px;padding:8px 6px 4px;font-weight:600}
+.sb-list{overflow-y:auto;flex:1;padding:0 10px}
+.item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r1);color:var(--dim);cursor:pointer;width:100%;text-align:left}
+.item:hover{background:var(--bg3);color:var(--text)}.item.active{background:var(--accent-bg);color:var(--accent)}
+.item span.t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .x{opacity:0;padding:2px}.item:hover .x{opacity:1}
+.sb-collapsed .t,.sb-collapsed .sb-title,.sb-collapsed .brand b,.sb-collapsed .x,.sb-collapsed .sb-list,.sb-collapsed #apiTxt{display:none}
+.status{display:flex;align-items:center;gap:8px;padding:12px 14px;border-top:1px solid var(--line);color:var(--dim);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}.dot.err{background:var(--err)}.dot.busy{background:var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.topbar .sp{flex:1}
+select,input[type=text],input[type=password],input[type=number],textarea{background:var(--bg);border:1px solid var(--line2);border-radius:var(--r1);padding:7px 9px;width:100%;min-height:34px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%2398a2b0' stroke-width='1.5'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2);outline:none;box-shadow:0 0 0 3px var(--accent-bg)}
+.topbar select{width:auto;max-width:230px}
+.pill{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);display:inline-flex;gap:6px;align-items:center}
+#chat{flex:1;overflow-y:auto;padding:20px 0}
+.col{max-width:820px;margin:0 auto;padding:0 18px}
+.msg{padding:12px 0;animation:in .25s ease}
+@keyframes in{from{opacity:0;transform:translateY(4px)}}
+.msg .meta{display:flex;gap:8px;align-items:center;color:var(--faint);font-size:12px;margin-bottom:4px}
+.msg .who{font-weight:600;color:var(--dim)}.msg.assistant .who{color:var(--accent)}
+.msg .body{overflow-wrap:anywhere}.msg.user .body{background:var(--bg3);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;white-space:pre-wrap}
+.msg.error .body{border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.07);color:#fecaca;border-radius:var(--r2);padding:10px 12px}
+.body p{margin:0 0 .7em}.body ul,.body ol{margin:0 0 .7em 1.3em}.body h3,.body h4{margin:.8em 0 .4em}
+.body code{font-family:var(--mono);font-size:12.5px;background:var(--bg3);padding:1px 5px;border-radius:4px}
+.cb{margin:.6em 0;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:#0a0c0f}
+.cb .h{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;background:var(--bg2);color:var(--faint);font-size:12px}
+.cb pre{padding:10px 12px;overflow-x:auto;font:12.5px/1.6 var(--mono)}.cb pre code{background:none;padding:0}
+.acts{display:flex;gap:4px;margin-top:4px}.acts .btn{min-height:26px;padding:2px 8px;font-size:12px}
+.cursor::after{content:"";display:inline-block;width:7px;height:14px;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:pulse 1s infinite}
+.empty{text-align:center;padding:9vh 0 0}.empty h1{font-size:30px;letter-spacing:-.5px}.empty p{color:var(--dim);margin:8px 0 22px}
+.sugg{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:620px;margin:0 auto}
+.sugg button{padding:12px;border:1px solid var(--line);border-radius:var(--r2);text-align:left;color:var(--dim);background:var(--bg2);transition:.15s}
+.sugg button:hover{border-color:var(--accent2);color:var(--text)}
+.composer{border-top:1px solid var(--line);padding:12px 0 14px;background:var(--bg2)}
+.box{border:1px solid var(--line2);border-radius:var(--r2);background:var(--bg);padding:8px}
+.box:focus-within{border-color:var(--accent2);box-shadow:0 0 0 3px var(--accent-bg)}
+.box textarea{border:0;background:none;resize:none;min-height:48px;max-height:200px;box-shadow:none!important}
+.box .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+kbd{font:11px var(--mono);border:1px solid var(--line2);border-radius:4px;padding:0 5px;color:var(--faint)}
+.hint{color:var(--faint);font-size:12px;flex:1}
+.pa{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:12px;color:var(--dim)}
+/* config */
+.cs{padding:14px;border-bottom:1px solid var(--line)}
+.cs h4{font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.f{margin-bottom:10px}.f label{display:flex;justify-content:space-between;color:var(--dim);font-size:12px;margin-bottom:4px}
+.f small,.note{color:var(--faint);font-size:12px;display:block;margin-top:4px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.tg{position:relative;width:36px;height:20px;flex:none}.tg input{opacity:0;position:absolute;inset:0;width:100%;height:100%;cursor:pointer;z-index:1}
+.tg i{position:absolute;inset:0;background:var(--line2);border-radius:20px;transition:.2s}
+.tg i::after{content:"";position:absolute;width:14px;height:14px;top:3px;left:3px;background:#fff;border-radius:50%;transition:.2s}
+.tg input:checked+i{background:var(--accent2)}.tg input:checked+i::after{transform:translateX(16px)}
+.tg input:disabled{cursor:not-allowed}.tg input:disabled+i{opacity:.4}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.st{background:var(--bg);border:1px solid var(--line);border-radius:var(--r1);padding:7px 9px}
+.st b{display:block;font-size:15px;font-variant-numeric:tabular-nums}.st span{color:var(--faint);font-size:11.5px}
+.bar{height:5px;background:var(--line);border-radius:5px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.spark{display:flex;align-items:flex-end;gap:2px;height:34px;margin-top:8px}.spark i{flex:1;background:var(--accent2);border-radius:2px 2px 0 0;min-height:2px}
+.tabs{display:flex;gap:4px;margin-bottom:8px}.tabs button{padding:3px 10px;border-radius:var(--r1);color:var(--dim);font-size:12px}.tabs button.on{background:var(--accent-bg);color:var(--accent)}
+.kv{font:12px/1.7 var(--mono);color:var(--dim);word-break:break-all}.kv b{color:var(--text);font-weight:500}
+.code{background:#0a0c0f;border:1px solid var(--line);border-radius:var(--r1);padding:8px;font:11.5px/1.55 var(--mono);overflow:auto;max-height:200px;white-space:pre;margin-bottom:6px}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.tags span{background:var(--bg3);border:1px solid var(--line2);border-radius:4px;padding:0 6px;font:12px var(--mono)}
+/* modal & toast */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:50;padding:16px}
+.modal.on{display:grid}.mc{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r2);max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:18px;animation:in .2s}
+.mc h3{margin-bottom:10px}.mc p,.mc li{color:var(--dim);margin-bottom:8px}.mc ul{margin-left:18px}
+#toasts{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;z-index:60}
+.toast{background:var(--bg3);border:1px solid var(--line2);border-left:3px solid var(--accent);padding:8px 12px;border-radius:var(--r1);animation:in .2s;max-width:300px}
+.toast.err{border-left-color:var(--err)}
+.warn{font-size:12px;padding:6px 9px;border-radius:6px;margin-top:6px;border-left:3px solid var(--warn);background:rgba(251,191,36,.07);color:#e9cf8a}
+.warn.info{border-left-color:var(--accent2);background:var(--accent-bg);color:var(--dim)}.warn.off{border-left-color:var(--line2);background:var(--bg);color:var(--faint)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.chips button,.tags button{padding:1px 8px;border:1px solid var(--line2);border-radius:99px;font-size:12px;color:var(--dim);transition:.15s}
+.chips button:hover{border-color:var(--accent2);color:var(--text)}.chips button.on{background:var(--accent-bg);border-color:var(--accent2);color:var(--accent)}
+.tags button{border:0;padding:0 2px}.tags button:hover{color:var(--err)}
+.seg{display:none;margin:-2px 0 8px;border:1px solid var(--line2);border-radius:6px;overflow:hidden}.seg button{flex:1;padding:4px;color:var(--dim);font-size:12px}.seg button.on{background:var(--accent-bg);color:var(--accent)}
+.think{margin:4px 0 8px;border-left:2px solid var(--line2);padding-left:10px;color:var(--faint);font-size:13px}.think summary{cursor:pointer;color:var(--dim)}.think div{white-space:pre-wrap;margin-top:4px;max-height:220px;overflow:auto}
+.pips{display:flex;gap:4px}.pips i{flex:1;height:5px;border-radius:3px;background:var(--line);transition:.25s}.pips i.on{background:var(--accent)}
+.rules details{border-top:1px solid var(--line);padding:5px 0}.rules summary{cursor:pointer;color:var(--faint);list-style:none;display:flex;gap:6px;font-size:12.5px}.rules summary::-webkit-details-marker{display:none}.rules summary.hit{color:var(--text)}.rules summary.hit b{color:var(--ok)}.rules summary em{margin-left:auto;font-style:normal;font-size:12px;color:var(--faint)}
+.rules details div{padding:4px 0 2px 18px;font-size:12px;color:var(--dim)}.rules code{font:12px var(--mono);color:var(--warn);background:none;display:inline-block;margin-right:6px}.rules p{margin:4px 0 0}
+.rows>div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.rows>div span{color:var(--dim)}
+.only-m{display:none}
+/* ===== 6. RESPONSIVE ===== */
+@media(max-width:1100px){#app{grid-template-columns:var(--sbw,248px) 1fr 0}#config{position:fixed;right:0;top:0;bottom:0;width:min(360px,100vw);transform:translateX(100%);transition:.25s;z-index:40}#app:not(.cf-collapsed) #config{transform:none}#app{--cfw:0px}}
+@media(max-width:760px){
+  #app,#app.sb-collapsed{grid-template-columns:0 1fr 0}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:40;transform:translateX(-100%);transition:.25s}
+  #app.sb-open #sidebar{transform:none}#app.sb-open .t,#app.sb-open .sb-title,#app.sb-open .brand b,#app.sb-open .sb-list{display:revert}
+  .sugg{grid-template-columns:1fr}.hint{display:none}.only-m{display:inline-flex}.topbar select{max-width:150px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" class="cf-collapsed">
+  <aside id="sidebar">
+    <div class="brand"><div class="logo"></div><b>Nova Playground</b></div>
+    <div class="sb-sec"><button class="btn primary" id="newSess" style="width:100%;justify-content:center" title="New session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="t">New session</span></button></div>
+    <div class="sb-title">Sessions</div><div class="sb-list" id="sessList" style="max-height:34%;flex:none"></div>
+    <div class="sb-title">Saved experiments</div><div class="sb-list" id="expList"></div>
+    <div class="sb-sec">
+      <button class="item" id="saveExp" title="Save current settings as an experiment"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></svg><span class="t">Save experiment</span></button>
+      <button class="item active" id="navPlay"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg><span class="t">Playground</span></button>
+      <button class="item" id="navDocs"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg><span class="t">Documentation</span></button>
+      <button class="item" id="navSet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="t">Settings</span></button>
+    </div>
+    <div class="status"><span class="dot" id="apiDot"></span><span id="apiTxt">No API key</span>
+      <button class="btn ghost" id="sbToggle" style="margin-left:auto;padding:4px" title="Collapse sidebar"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <button class="btn ghost only-m" id="sbOpen" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <select id="modelTop" aria-label="Model"></select>
+      <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">Not connected</span></span>
+      <input type="text" id="sessName" aria-label="Session name" style="width:170px">
+      <span class="sp"></span>
+      <button class="btn" id="resetBtn" title="Reset: clear messages and restore defaults"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>Reset</button>
+      <button class="btn danger" id="clearBtn" title="Clear messages"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Clear</button>
+      <button class="btn" id="cfToggle" title="Toggle configuration"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Config</button>
+    </div>
+    <div id="chat"><div class="col" id="msgs"></div></div>
+    <div class="composer"><div class="col">
+      <div class="box">
+        <textarea id="prompt" rows="2" placeholder="Write a prompt…" aria-label="Prompt"></textarea>
+        <div class="row">
+          <span class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <kbd>Esc</kbd> stop</span>
+          <button class="btn danger" id="stopBtn" disabled><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stop</button>
+          <button class="btn primary" id="sendBtn"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>Send</button>
+        </div>
+      </div>
+      <div class="pa" id="pa"></div>
+    </div></div>
+  </main>
+
+  <aside id="config">
+    <div class="cs"><h4>Model</h4>
+      <div class="f"><label>Provider</label><select id="provider"></select></div>
+      <div class="f"><label>Model</label><select id="model"></select><div class="tags" id="caps"></div><small id="modelNote"></small></div>
+      <div class="f"><label>Endpoint (chat completions)</label><input type="text" id="endpoint" spellcheck="false"></div>
+      <div class="f"><label>API key</label>
+        <div style="display:flex;gap:4px"><input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key"><button class="btn" id="showKey" title="Show / hide key"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="btn danger" id="clearKey" title="Clear key"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+        <div class="sw" style="margin-top:8px"><span>Remember for this tab</span><label class="tg"><input type="checkbox" id="remember"><i></i></label></div>
+        <small>Kept in memory by default. If remembered, it is stored in sessionStorage only. Browser-side keys are not safe for production; use a backend proxy.</small></div>
+    </div>
+    <div class="cs"><h4>System prompt <button class="btn ghost" id="sysReset" style="min-height:24px;padding:0 6px">Reset</button><button class="btn ghost" id="sysClear" style="min-height:24px;padding:0 6px">Clear</button></h4>
+      <textarea id="system" rows="4"></textarea><small id="sysCount"></small></div>
+    <div class="cs"><h4>Parameters</h4>
+      <div class="f"><label>Temperature <b id="tempV"></b></label><input type="range" id="temp" min="0" max="2" step="0.05"><div class="chips" id="tempPre"><button data-temp="0.2">Precise</button><button data-temp="0.7">Balanced</button><button data-temp="1.2">Creative</button></div><small>Lower is more predictable, higher is more creative.</small></div>
+      <div class="f"><label>Max tokens <input type="number" id="maxNum" min="1" max="32768" style="width:90px;min-height:24px;padding:2px 6px"></label><input type="range" id="maxTok" min="16" max="8192" step="16"><div class="chips" id="maxPre"><button data-max="256">256</button><button data-max="512">512</button><button data-max="1024">1k</button><button data-max="2048">2k</button><button data-max="4096">4k</button></div><div class="warn" id="maxWarn" style="display:none"></div><small>Free tiers cap tokens per minute, so keep this modest while exploring.</small></div>
+      <div class="f"><label>Stop sequences (comma-separated, max 4)</label><input type="text" id="stop" placeholder="END, ###"><div class="tags" id="stopTags"></div><small>Up to 4. Click × on a tag to remove it. Empty means none are sent.</small></div>
+      <div class="sw"><span>Web search</span><label class="tg"><input type="checkbox" id="search"><i></i></label></div><div class="warn" id="searchWarn"></div><div style="height:10px"></div>
+      <div class="sw"><span>Reasoning mode</span><label class="tg"><input type="checkbox" id="reason"><i></i></label></div><div class="seg" id="effort"></div><div class="warn" id="reasonWarn"></div><div style="height:10px"></div>
+      <div class="sw"><span>Stream response</span><label class="tg"><input type="checkbox" id="stream"><i></i></label></div>
+    </div>
+    <div class="cs"><h4>Per-minute budget</h4><div class="f"><label>Your tokens-per-minute limit <input type="number" id="tpm" min="100" step="500" style="width:90px;min-height:24px;padding:2px 6px"></label></div><div class="bar"><i id="tpmBar"></i></div><small id="tpmNote"></small><small>Worst case counts the whole conversation plus max tokens, which includes any thinking. Set the limit to match your plan.</small></div>
+    <div class="cs"><h4>Prompt analysis</h4><div id="analysis"></div></div>
+    <div class="cs"><h4>Performance</h4><div class="stats" id="perf" style="grid-template-columns:repeat(3,1fr);text-align:center"></div><div class="spark" id="spark" title="Tokens/sec per response"></div><small>Web search and thinking both delay the first token. That is what they cost you in time.</small></div>
+    <div class="cs"><h4>Token usage</h4><div class="rows" id="tokens"></div><div class="bar"><i id="ctxBar"></i></div><small id="ctxNote"></small>
+      <small>Input grows every turn because the whole conversation is re-sent on each request. The API remembers nothing. Estimates (~4 characters per token) give way to provider-reported numbers after each reply.</small><small>Every production API call runs against a quota like this. Watch it drain while you experiment.</small></div>
+    <div class="cs"><h4>Request inspector</h4>
+      <div class="kv" id="inspect"></div>
+      <div class="tabs" style="margin-top:10px"><button class="on" data-t="curl">cURL</button><button data-t="py">Python</button><button data-t="body">Body</button><span style="flex:1"></span><button class="btn" id="copyCode" style="min-height:24px;padding:0 8px">Copy</button></div>
+      <div class="code" id="code"></div>
+    </div>
+  </aside>
+</div>
+<div class="modal" id="modal"><div class="mc" id="modalBody"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ===== 7. STATE ===== */
+const $ = s => document.querySelector(s);
+const PROVIDERS = {
+  groq:{name:"Groq",url:"https://api.groq.com/openai/v1/chat/completions",base:"https://api.groq.com/openai/v1",
+    models:[
+      {id:"llama-3.3-70b-versatile",label:"Llama 3.3 70B"},
+      {id:"llama-3.1-8b-instant",label:"Llama 3.1 8B Instant"},
+      {id:"openai/gpt-oss-120b",label:"GPT-OSS 120B",reasoning:["low","medium","high"],search:"browser"},
+      {id:"openai/gpt-oss-20b",label:"GPT-OSS 20B",reasoning:["low","medium","high"],search:"browser"},
+      {id:"qwen/qwen3-32b",label:"Qwen3 32B",reasoning:["default"],offValue:"none",parsed:true},
+      {id:"groq/compound",label:"Groq Compound (built-in search)",search:"builtin",noStop:true},
+      {id:"groq/compound-mini",label:"Groq Compound Mini (built-in search)",search:"builtin",noStop:true}]},
+  openai:{name:"OpenAI",url:"https://api.openai.com/v1/chat/completions",base:"https://api.openai.com/v1",models:[{id:"gpt-4o-mini",label:"GPT-4o mini"},{id:"gpt-4o",label:"GPT-4o"}]},
+  custom:{name:"Custom (OpenAI-compatible)",url:"http://localhost:11434/v1/chat/completions",base:"http://localhost:11434/v1",models:[{id:"custom-model",label:"Type model id in Settings…"}]}
+};
+const DEF_SYS = "You are a helpful, precise assistant. Answer clearly and show code in fenced blocks.";
+const DEF_CFG = {provider:"groq",model:"llama-3.3-70b-versatile",endpoint:PROVIDERS.groq.url,system:DEF_SYS,temp:0.7,max:1024,stop:[],search:false,reason:false,stream:true,effort:"medium",tpm:6000};
+const S = {cfg:{...DEF_CFG},sessions:[],cur:null,experiments:[],apiKey:"",ctrl:null,busy:false,conn:"idle",codeTab:"curl",rate:null,collapsed:false};
+
+/* ===== 8. CONFIG / STORAGE ===== */
+const store = {
+  get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{toast("Could not save to localStorage","err")}}
+};
+function saveAll(){store.set("nova.cfg",S.cfg);store.set("nova.sessions",S.sessions);store.set("nova.cur",S.cur);store.set("nova.exp",S.experiments)}
+function loadAll(){
+  S.cfg={...DEF_CFG,...store.get("nova.cfg",{})};S.sessions=store.get("nova.sessions",[]);S.cur=store.get("nova.cur",null);S.experiments=store.get("nova.exp",[]);
+  try{const k=sessionStorage.getItem("nova.key");if(k){S.apiKey=k;$("#remember").checked=true}}catch{}
+  if(!S.sessions.length)newSession(true);
+  if(!S.sessions.find(s=>s.id===S.cur))S.cur=S.sessions[0].id;
+}
+const sess=()=>S.sessions.find(s=>s.id===S.cur);
+const prov=()=>PROVIDERS[S.cfg.provider]||PROVIDERS.custom;
+const modelInfo=()=>prov().models.find(m=>m.id===S.cfg.model)||{id:S.cfg.model};
+const uid=()=>Math.random().toString(36).slice(2,10);
+
+/* ===== 9. UTIL ===== */
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m,t){const d=document.createElement("div");d.className="toast "+(t||"");d.textContent=m;$("#toasts").append(d);setTimeout(()=>d.remove(),2800)}
+async function copy(text,msg="Copied"){try{await navigator.clipboard.writeText(text);toast(msg)}catch{toast("Copy failed. Select the text manually.","err")}}
+const fmt=n=>n==null||isNaN(n)?"N/A":Number(n).toLocaleString();
+const time=t=>new Date(t).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+function md(src){
+  const blocks=[];let t=esc(src).replace(/```(\w*)\n?([\s\S]*?)```/g,(_,l,c)=>{blocks.push({l,c});return `\u0000${blocks.length-1}\u0000`});
+  t=t.split(/\n{2,}/).map(p=>{
+    if(/^\u0000\d+\u0000$/.test(p.trim()))return p.trim();
+    if(/^#{1,4} /.test(p))return p.replace(/^#{1,4} (.*)$/gm,"<h3>$1</h3>");
+    if(/^\s*[-*] /.test(p))return "<ul>"+p.split("\n").map(l=>"<li>"+l.replace(/^\s*[-*] /,"")+"</li>").join("")+"</ul>";
+    if(/^\s*\d+\. /.test(p))return "<ol>"+p.split("\n").map(l=>"<li>"+l.replace(/^\s*\d+\. /,"")+"</li>").join("")+"</ol>";
+    return "<p>"+p.replace(/\n/g,"<br>")+"</p>";
+  }).join("");
+  t=t.replace(/`([^`\n]+)`/g,"<code>$1</code>").replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>");
+  return t.replace(/\u0000(\d+)\u0000/g,(_,i)=>{const b=blocks[i];return `<div class="cb"><div class="h"><span>${b.l||"code"}</span><button class="btn ghost" data-copy="${i}" style="min-height:22px;padding:0 6px">Copy</button></div><pre><code>${b.c.replace(/\n$/,"")}</code></pre></div>`}).replace(/data-copy="(\d+)"/g,(_,i)=>`data-code="${encodeURIComponent(blocks[i].c.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,"&"))}"`);
+}
+
+/* ===== 12. TOKEN ESTIMATION ===== */
+const estTokens=s=>s?Math.ceil(s.length/4):0;
+function convEstimate(){const s=sess();return estTokens(S.cfg.system)+s.messages.filter(m=>m.role!=="error").reduce((a,m)=>a+estTokens(m.content)+4,0)}
+
+/* ===== 11. PROMPT ANALYSIS (rule-based) ===== */
+const OPEN=new Set();
+const RULES=[
+ {id:"io",group:"ex",label:"Input: / Output: pairs with an answer",what:"Looks for Output: lines that have text. An empty Output: is the question you are asking, not an example.",
+  find:t=>[...t.matchAll(/^\s*output\s*:[ \t]*(\S.*)$/gim)].map(x=>"Output: "+x[1].slice(0,24)),
+  note:t=>(t.match(/^\s*output\s*:[ \t]*$/gim)||[]).length?"Empty Output: ignored. That is the question, not an example.":""},
+ {id:"qa",group:"ex",label:"Q: / A: pairs with an answer",what:"Looks for A: lines that have text. An empty A: is ignored.",
+  find:t=>[...t.matchAll(/^\s*a\s*:[ \t]*(\S.*)$/gim)].map(x=>"A: "+x[1].slice(0,24)),
+  note:t=>(t.match(/^\s*a\s*:[ \t]*$/gim)||[]).length?"Empty A: ignored.":""},
+ {id:"arrow",group:"ex",label:"Lines with text on both sides of -> or =>",what:"Mapping lines such as: great -> positive.",find:t=>[...t.matchAll(/^.*\S.*(?:->|=>)[ \t]*\S.*$/gm)].map(x=>x[0].trim().slice(0,30))},
+ {id:"quoted",group:"ex",label:'Quoted pairs like "x" -> "y"',what:"A quoted input mapped to a quoted output.",find:t=>[...t.matchAll(/"[^"\n]+"\s*(?:->|=>)\s*"[^"\n]+"/g)].map(x=>x[0].slice(0,30))},
+ {id:"blocks",group:"ex",label:"Blocks separated by ### or ---",what:"Three or more blocks split by a ### or --- line. The last block is treated as the question.",
+  find:t=>{const b=t.split(/^\s*(?:###|---)\s*$/m).filter(x=>x.trim());return b.length>=3?b.slice(0,-1).map(x=>x.trim().slice(0,24)):[]}},
+ {id:"cot",label:"Chain-of-thought",what:"Phrases that ask the model to reason first, such as step by step or show your work.",find:t=>t.match(/step[- ]by[- ]step|think (it )?through|reason (through|carefully)|show your (work|reasoning)|let's think/gi)||[]},
+ {id:"role",label:"Role prompting",what:"Phrases that assign a persona, such as you are a or act as.",find:t=>t.match(/\b(you are an?|act as|pretend to be|your role is|as an? (expert|senior|experienced))\b/gi)||[]},
+ {id:"neg",label:"Negative constraint",what:"Words that forbid something, such as do not, never or avoid.",find:t=>t.match(/\b(do not|don't|never|avoid|without|must not|no more than)\b/gi)||[]},
+ {id:"fmt",label:"Format constraint",what:"Asks for a shape, such as JSON, a table, bullets or a length.",find:t=>t.match(/\b(json|markdown|table|bullets?|bullet points|numbered list|csv|yaml|\d+ (words|sentences|bullets|items|steps)|in (one|two|three|\d+) (sentence|paragraph)s?)\b/gi)||[]}
+];
+function analyze(text){
+  const words=(text.trim().match(/\S+/g)||[]).length,chars=text.length,low=text.toLowerCase();
+  const rules=RULES.map(r=>{const ev=r.find(text);return {...r,ev,n:ev.length,note:r.note?r.note(text):""}});
+  const shots=Math.max(0,...rules.filter(r=>r.group==="ex").map(r=>r.n));
+  const hit=id=>rules.find(r=>r.id===id).n>0,tags=[];
+  if(shots>=2)tags.push("Few-shot ("+shots+")");else if(shots===1)tags.push("One-shot (1)");else if(words)tags.push("Zero-shot");
+  if(hit("role"))tags.push("Role-based");if(hit("cot"))tags.push("Reasoning-oriented");
+  if(/\b(write|explain|generate|list|summari[sz]e|create|build|compare|describe|translate|fix|show)\b/.test(low))tags.push("Instruction-based");
+  if(words>60||/(context:|background:|here is|given the)/.test(low))tags.push("Context-rich");
+  const sentences=(text.match(/[.!?]+/g)||[]).length+1;
+  const cx=words>120||sentences>6?"High":words>35?"Medium":"Low";
+  const verbs=tags.includes("Instruction-based"),constraints=hit("fmt")||hit("neg")||/\b(must|only|words|steps)\b/.test(low);
+  const clarity=!words?"N/A":verbs&&constraints?"Clear":verbs||constraints?"Moderate":"Vague";
+  const ctx=!words?"N/A":/(context:|background:|here is|given|```)/.test(low)||words>60||(text.match(/\n/g)||[]).length>=2?"Provided":"Minimal";
+  return {tags:tags.length?tags:["Empty"],rules,shots,words,chars,tok:estTokens(text),cx,clarity,ctx};
+}
+function renderAnalysis(){
+  const a=analyze($("#prompt").value);
+  $("#analysis").innerHTML=`<div class="pips" title="Few-shot examples found">${[1,2,3,4,5,6].map(i=>`<i class="${i<=a.shots?"on":""}"></i>`).join("")}</div>
+  <div class="tags" style="margin:8px 0 6px">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>
+  <small style="margin:0 0 8px">Example count is the largest count from any single rule. Rules overlap, so they are never added up.</small>
+  <div class="stats"><div class="st"><b>${a.words}</b><span>Words</span></div><div class="st"><b>${a.chars}</b><span>Characters</span></div>
+  <div class="st"><b>~${a.tok}</b><span>Est. tokens</span></div><div class="st"><b>${a.cx}</b><span>Complexity</span></div>
+  <div class="st"><b>${a.clarity}</b><span>Instruction clarity</span></div><div class="st"><b>${a.ctx}</b><span>Context</span></div></div>
+  <div class="rules" style="margin-top:10px">${a.rules.map(r=>`<details data-rid="${r.id}" ${OPEN.has(r.id)?"open":""}><summary class="${r.n?"hit":""}"><b>${r.n?"✓":"–"}</b><span>${esc(r.label)}</span><em>${r.n?r.n+" found":"none"}</em></summary><div>${r.ev.slice(0,6).map(e=>`<code>${esc(e)}</code>`).join("")}${r.note?`<p>${esc(r.note)}</p>`:""}<p>${esc(r.what)}</p></div></details>`).join("")}</div>
+  <small>Pattern rules running in your browser. No model is used for this analysis.</small>`;
+  $("#pa").innerHTML=$("#prompt").value?`<span class="pill">${a.tags.join(" · ")}</span><span class="pill">~${a.tok} tokens</span><span class="pill">${a.cx} complexity</span>`:"";
+}
+/* ===== 13. METRICS ===== */
+function renderMetrics(){
+  const s=sess(),m=s.metrics||[],l=m[m.length-1];
+  const card=(v,k)=>`<div class="st"><b>${v}</b><span>${k}</span></div>`;
+  $("#perf").innerHTML=card(l?.ttft!=null?l.ttft:"–","ms to first answer token")+card(l?(l.total/1000).toFixed(2):"–","seconds total")+card(l?.tps!=null?l.tps.toFixed(1):"–","tokens / second");
+  const mx=Math.max(1,...m.map(x=>x.tps||0));
+  $("#spark").innerHTML=m.slice(-20).map(x=>`<i style="height:${Math.max(6,(x.tps||0)/mx*100)}%" title="${x.tps?x.tps.toFixed(1)+' tok/s':'N/A'}"></i>`).join("");
+  const sum=k=>m.reduce((a,x)=>a+(x[k]||0),0);
+  const dv=v=>v==null?"–":fmt(v),row=(k,v,b)=>`<div><span>${k}</span><b ${b?"":'style="font-weight:500"'}>${v}</b></div>`;
+  $("#tokens").innerHTML=row("Input tokens",dv(l?.inTok))+row("Reasoning tokens",dv(l?.reasonTok))+row("Output tokens",dv(l?.outTok))+row("Total",dv(l?.total_tokens),1)+row("Tokens left this minute",S.rate==null?"–":fmt(S.rate)+(S.rateMax?" / "+fmt(S.rateMax):""))+row("Session total",m.length?fmt(sum("total_tokens")):"–")+row("Context (estimated)","~"+fmt(convEstimate()))+(S.rate!=null&&S.rateMax?`<div class="bar" style="margin:8px 0 0"><i style="width:${Math.min(100,S.rate/S.rateMax*100)}%"></i></div>`:"");
+  const lim=8192*4,pct=Math.min(100,convEstimate()/lim*100);
+  $("#ctxBar").style.width=pct+"%";$("#ctxNote").textContent=`Estimated context: ~${fmt(convEstimate())} tokens (bar shows share of 32k).`;
+}
+
+/* ===== 14. CODE GENERATION ===== */
+function buildBody(forSend){
+  const c=S.cfg,mi=modelInfo(),msgs=[];
+  if(c.system.trim())msgs.push({role:"system",content:c.system});
+  sess().messages.filter(m=>m.role==="user"||m.role==="assistant").forEach(m=>msgs.push({role:m.role,content:m.content}));
+  const draft=$("#prompt").value.trim();
+  if(!forSend&&draft)msgs.push({role:"user",content:draft});
+  const b={model:c.model,messages:msgs,temperature:c.temp,max_tokens:c.max,stream:c.stream};
+  if(c.stream)b.stream_options={include_usage:true};
+  if(c.stop.length&&!mi.noStop)b.stop=c.stop;
+  if(mi.reasoning){if(c.reason){b.reasoning_effort=mi.reasoning.includes(c.effort)?c.effort:mi.reasoning[0];if(mi.parsed)b.reasoning_format="parsed"}else if(mi.offValue)b.reasoning_effort=mi.offValue}
+  if(c.search&&mi.search==="browser"){b.tools=[{type:"browser_search"}];b.stream=false;delete b.stream_options}
+  return b;
+}
+function pyStr(o){return JSON.stringify(o,null,4).replace(/\btrue\b/g,"True").replace(/\bfalse\b/g,"False")}
+function genCode(){
+  const b=buildBody(false),url=S.cfg.endpoint,base=url.replace(/\/chat\/completions\/?$/,"");
+  const curl=`curl ${url} \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -d '${JSON.stringify(b,null,2).replace(/'/g,"'\\''")}'`;
+  const {model,messages,...rest}=b;delete rest.stream_options;
+  const extra=rest.reasoning_effort?`,\n    extra_body={"reasoning_effort": "${rest.reasoning_effort}"}`:"";
+  if(rest.reasoning_effort)delete rest.reasoning_effort;
+  const py=`import os\nfrom openai import OpenAI\n\nclient = OpenAI(\n    base_url="${base}",\n    api_key=os.environ["API_KEY"],\n)\n\nresponse = client.chat.completions.create(\n    model="${model}",\n    messages=${pyStr(messages).replace(/\n/g,"\n    ")},\n${Object.entries(rest).map(([k,v])=>`    ${k}=${pyStr(v).replace(/\n/g,"\n    ")},`).join("\n")}${extra}\n)\n\n${b.stream?"for chunk in response:\n    if chunk.choices and chunk.choices[0].delta.content:\n        print(chunk.choices[0].delta.content, end=\"\")":"print(response.choices[0].message.content)"}`;
+  return {curl,py,body:JSON.stringify(b,null,2)};
+}
+function renderInspector(){
+  const c=S.cfg,b=buildBody(false),mi=modelInfo();
+  $("#inspect").innerHTML=`<b>POST</b> ${esc(c.endpoint)}<br>Model: <b>${esc(c.model)}</b> · Messages: <b>${b.messages.length}</b><br>Temp: <b>${c.temp}</b> · Max tokens: <b>${c.max}</b><br>Stop: <b>${c.stop.length&&!mi.noStop?esc(c.stop.join(", ")):"none"}</b><br>Options: <b>${[c.stream&&"stream",c.reason&&mi.reasoning&&"reasoning",c.search&&mi.search&&"web search"].filter(Boolean).join(", ")||"none"}</b><br>Headers: <b>Content-Type: application/json</b>, <b>Authorization: Bearer ••••••••</b><br>System prompt: <b>${c.system.trim()?estTokens(c.system)+" est. tokens":"none"}</b>`;
+  $("#code").textContent=genCode()[S.codeTab];
+}
+
+/* ===== 10. API CLIENT + STREAMING ===== */
+function setConn(state,txt){
+  S.conn=state;const map={idle:"",ok:"ok",busy:"busy",err:"err"};
+  ["#connDot","#apiDot"].forEach(i=>$(i).className="dot "+map[state]);
+  $("#connTxt").textContent=txt;$("#apiTxt").textContent=txt;
+}
+function refreshConn(){
+  if(S.busy)return;
+  if(!S.apiKey)setConn("idle","No API key");else if(S.conn!=="ok"&&S.conn!=="err")setConn("idle","Key set · untested");
+}
+function friendlyError(status,text){
+  let detail="";try{detail=JSON.parse(text)?.error?.message||""}catch{detail=text.slice(0,200)}
+  const m={401:"Authentication failed. Check your API key.",403:"Access denied for this key or model.",404:"Model or endpoint not found. Check the model name and endpoint.",429:"Rate limit reached. Wait and retry, or lower max tokens.",400:"The provider rejected the request parameters.",413:"Request too large for this model.",500:"The provider had a server error. Retry shortly.",503:"The model is unavailable or overloaded. Try again or switch models."}[status]||`Request failed (HTTP ${status}).`;
+  return detail?`${m}\n${detail}`:m;
+}
+function readRate(h){const r=h.get("x-ratelimit-remaining-tokens"),L=h.get("x-ratelimit-limit-tokens");S.rate=r!=null&&!isNaN(+r)?+r:null;if(L&&!isNaN(+L))S.rateMax=+L}
+
+async function send(textOverride){
+  if(S.busy)return;
+  const text=(textOverride??$("#prompt").value).trim();
+  if(!text)return;
+  const s=sess();
+  if(!S.apiKey){addErr("No API key set. Add your key in the Config panel to send requests.");if(window.innerWidth<=1100)$("#app").classList.remove("cf-collapsed");$("#apiKey").focus();return}
+  if(!S.cfg.endpoint.trim()){addErr("Endpoint is empty. Set a chat-completions URL.");return}
+  s.messages.push({role:"user",content:text,t:Date.now()});
+  if(s.name==="New session"){s.name=text.slice(0,32);$("#sessName").value=s.name}
+  $("#prompt").value="";autoGrow();renderAnalysis();
+  const am={role:"assistant",content:"",t:Date.now(),model:S.cfg.model};s.messages.push(am);
+  S.busy=true;S.ctrl=new AbortController();setBusy(true);setConn("busy","Generating…");renderAll();
+  const body=buildBody(true);body.messages.pop(); // remove empty assistant placeholder (not included since filter later)
+  const t0=performance.now();let tFirst=null,usage=null,outChars=0,fin=null;
+  try{
+    const res=await fetch(S.cfg.endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.apiKey},body:JSON.stringify(body),signal:S.ctrl.signal});
+    readRate(res.headers);
+    if(!res.ok){throw {http:res.status,text:await res.text()}}
+    if(body.stream&&res.body&&(res.headers.get("content-type")||"").includes("event-stream")){
+      const rd=res.body.getReader(),dec=new TextDecoder();let buf="";
+      for(;;){
+        const {done,value}=await rd.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop();
+        for(const ln of lines){
+          const l=ln.trim();if(!l.startsWith("data:"))continue;const d=l.slice(5).trim();if(d==="[DONE]")continue;
+          let j;try{j=JSON.parse(d)}catch{continue}
+          if(j.error)throw {http:0,text:JSON.stringify(j)};
+          const ch=j.choices?.[0];fin=ch?.finish_reason||fin;
+          const rs=ch?.delta?.reasoning;if(rs){am.reasoning=(am.reasoning||"")+rs;paintLast(am,true)}
+          const delta=ch?.delta?.content;
+          if(delta){if(tFirst==null)tFirst=performance.now()-t0;am.content+=delta;outChars+=delta.length;paintLast(am,true)}
+          usage=j.usage||j.x_groq?.usage||usage;
+        }
+      }
+    }else{
+      const j=await res.json();const c=j.choices?.[0]?.message?.content;
+      if(typeof c!=="string")throw {http:0,text:"Invalid response: no message content returned."};
+      am.content=c;am.reasoning=j.choices[0].message.reasoning;fin=j.choices[0].finish_reason;usage=j.usage;tFirst=null;outChars=c.length;
+    }
+    if(!am.content){if(fin==="length"||am.reasoning)throw {msg:"No answer was written. The model used all "+fmt(S.cfg.max)+" max tokens thinking. Raise max tokens (try 2048+) or turn reasoning off."};am.content="(The model returned an empty response.)"}
+    const total=Math.round(performance.now()-t0),outTok=usage?.completion_tokens;
+    const gen=tFirst!=null?(total-tFirst)/1000:total/1000;
+    (s.metrics=s.metrics||[]).push({ttft:tFirst!=null?Math.round(tFirst):null,total,inTok:usage?.prompt_tokens,outTok,total_tokens:usage?.total_tokens,reasonTok:usage?.completion_tokens_details?.reasoning_tokens,tps:outTok&&gen>0?outTok/gen:null});
+    am.usage=usage?"reported":"estimated";
+    setConn("ok","Connected");
+  }catch(e){
+    if(e?.name==="AbortError"){if(!am.content)s.messages.pop();else am.content+="\n\n*(stopped)*";setConn("idle","Stopped")}
+    else{
+      s.messages.splice(s.messages.indexOf(am),1);
+      const msg=e?.msg?e.msg:e&&e.http!==undefined?(e.http?friendlyError(e.http,e.text):"Invalid response from provider.\n"+e.text):"Network error. Check your connection and endpoint (CORS or offline).";
+      s.messages.push({role:"error",content:msg,t:Date.now()});setConn("err",e?.http===401?"Invalid key":"Request failed");
+    }
+  }finally{S.busy=false;S.ctrl=null;setBusy(false);saveAll();renderAll()}
+}
+function stop(){if(S.ctrl)S.ctrl.abort()}
+function addErr(m){sess().messages.push({role:"error",content:m,t:Date.now()});renderChat();toast(m.split("\n")[0],"err")}
+
+/* ===== 15. SESSIONS ===== */
+function newSession(silent){
+  const s={id:uid(),name:"New session",messages:[],metrics:[],t:Date.now()};
+  S.sessions.unshift(s);S.cur=s.id;if(!silent){saveAll();renderAll();$("#prompt").focus()}
+}
+function delSession(id){
+  S.sessions=S.sessions.filter(s=>s.id!==id);
+  if(!S.sessions.length)newSession(true);
+  if(S.cur===id)S.cur=S.sessions[0].id;saveAll();renderAll();
+}
+function renderSessions(){
+  $("#sessList").innerHTML=S.sessions.map(s=>`<div class="item ${s.id===S.cur?"active":""}" data-sid="${s.id}" tabindex="0" role="button"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="t">${esc(s.name)}</span><button class="x" data-del="${s.id}" aria-label="Delete session"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`).join("");
+  $("#expList").innerHTML=S.experiments.length?S.experiments.map(e=>`<div class="item" data-eid="${e.id}" tabindex="0" role="button"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4 20h16L14 9V3"/></svg><span class="t">${esc(e.name)}</span><button class="x" data-delexp="${e.id}" aria-label="Delete experiment"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`).join(""):`<div class="note" style="padding:4px 8px">None yet. Save the current settings to compare prompts later.</div>`;
+}
+function saveExperiment(){
+  const e={id:uid(),name:sess().name+" · "+S.cfg.model.split("/").pop(),cfg:{...S.cfg}};
+  S.experiments.unshift(e);saveAll();renderSessions();toast("Experiment saved");
+}
+
+/* ===== 16. RENDERING ===== */
+function msgHTML(m,i,live){
+  if(m.role==="error")return `<div class="msg error"><div class="meta"><span class="who">Error</span><span>${time(m.t)}</span></div><div class="body">${esc(m.content).replace(/\n/g,"<br>")}</div></div>`;
+  const u=m.role==="user";
+  return `<div class="msg ${m.role}" data-i="${i}"><div class="meta"><span class="who">${u?"You":"Nova · "+esc(m.model||"")}</span><span>${time(m.t)}</span>${live?"<span>generating…</span>":""}</div>${m.reasoning?`<details class="think"><summary>Thinking · ~${estTokens(m.reasoning)} tokens</summary><div>${esc(m.reasoning)}</div></details>`:""}<div class="body ${live?"cursor":""}">${u?esc(m.content):md(m.content)}</div>${u||live?"":`<div class="acts"><button class="btn ghost" data-cp="${i}">Copy response</button></div>`}</div>`;
+}
+function renderChat(){
+  const s=sess(),box=$("#msgs");
+  if(!s.messages.length){
+    box.innerHTML=`<div class="empty"><div class="logo" style="margin:0 auto 14px;width:40px;height:40px;border-radius:11px"></div><h1>Nova Playground</h1><p>Experiment. Prompt. Understand.<br>Add an API key, pick a model, and send your first prompt.</p>
+    <div class="sugg">${["Explain how transformers work.","Write a Python API using FastAPI.","Compare RAG and fine-tuning.","Generate a responsive landing page."].map(t=>`<button data-sugg="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>`;
+  }else box.innerHTML=s.messages.map((m,i)=>msgHTML(m,i,S.busy&&i===s.messages.length-1&&m.role==="assistant")).join("");
+  const c=$("#chat");c.scrollTop=c.scrollHeight;
+}
+function paintLast(m,live){
+  const el=$("#msgs .msg:last-child .body");if(!el)return;el.innerHTML=md(m.content);el.classList.toggle("cursor",live);
+  if(m.reasoning){let d=el.parentElement.querySelector(".think");if(!d){d=document.createElement("details");d.className="think";d.open=true;d.innerHTML="<summary></summary><div></div>";el.parentElement.insertBefore(d,el)}d.querySelector("summary").textContent="Thinking · ~"+estTokens(m.reasoning)+" tokens";d.querySelector("div").textContent=m.reasoning}
+  const c=$("#chat");if(c.scrollHeight-c.scrollTop-c.clientHeight<140)c.scrollTop=c.scrollHeight;
+}
+function setBusy(b){$("#sendBtn").disabled=b;$("#stopBtn").disabled=!b}
+function renderConfig(){
+  const c=S.cfg,mi=modelInfo(),p=prov();
+  $("#provider").innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}" ${k===c.provider?"selected":""}>${v.name}</option>`).join("");
+  const opts=p.models.map(m=>`<option value="${m.id}" ${m.id===c.model?"selected":""}>${esc(m.label)}</option>`).join("")+(p.models.some(m=>m.id===c.model)?"":`<option selected value="${esc(c.model)}">${esc(c.model)}</option>`);
+  $("#model").innerHTML=opts;$("#modelTop").innerHTML=opts;
+  $("#endpoint").value=c.endpoint;$("#system").value=c.system;$("#sysCount").textContent=c.system.length+" characters (~"+estTokens(c.system)+" tokens)";
+  $("#temp").value=c.temp;$("#tempV").textContent=c.temp.toFixed(2);$("#maxTok").value=Math.min(c.max,8192);$("#maxNum").value=c.max;
+  $("#stopTags").innerHTML=c.stop.map(x=>`<span>${esc(x)} <button data-rmstop="${esc(x)}" aria-label="Remove">×</button></span>`).join("");
+  $("#stop").value=c.stop.join(", ");$("#stop").disabled=!!mi.noStop;$("#stream").checked=c.stream;
+  renderCaps();
+  
+  
+  
+  
+  $("#sessName").value=sess().name;
+}
+function renderCaps(){
+  const c=S.cfg,mi=modelInfo(),sm=mi.search,rm=mi.reasoning;
+  $("#caps").innerHTML=[sm&&"Web search",rm&&"Reasoning",!mi.noStop&&"Stop sequences"].filter(Boolean).map(x=>`<span>${x}</span>`).join("")||"<span>Basic chat</span>";
+  $("#modelNote").textContent=mi.noStop?"This model does not accept stop sequences.":"";
+  $("#search").disabled=!sm||sm==="builtin";$("#search").checked=sm==="builtin"||(c.search&&!!sm);
+  $("#searchWarn").className="warn "+(sm?"info":"off");
+  $("#searchWarn").textContent=!sm?"This model has no web search. Try GPT-OSS or Groq Compound.":sm==="builtin"?"Compound searches by itself when a question needs it. It can't be turned off.":c.search?"On: extra input tokens and several seconds before the first word. Streaming is off for this request.":"Off. GPT-OSS can browse the web when this is on.";
+  $("#reason").disabled=!rm;$("#reason").checked=c.reason&&!!rm;
+  $("#reasonWarn").className="warn "+(rm?"info":"off");
+  $("#reasonWarn").textContent=!rm?"This model has no reasoning mode.":c.reason?"Thinking tokens count against max tokens and your per-minute quota. The thinking shows above each answer.":"Off. Turn on for harder problems, expect slower and costlier answers.";
+  const eff=$("#effort"),sel=rm&&(rm.includes(c.effort)?c.effort:rm[0]);
+  eff.style.display=rm&&rm.length>1&&c.reason?"flex":"none";
+  eff.innerHTML=rm&&rm.length>1?rm.map(x=>`<button data-eff="${x}" class="${sel===x?"on":""}">${x}</button>`).join(""):"";
+  const low=c.reason&&rm&&c.max<1024;$("#maxWarn").style.display=low?"block":"none";
+  $("#maxWarn").textContent=low?"Low for reasoning. The model may spend all of it thinking and return no answer. Try 2048 or more.":"";
+  document.querySelectorAll("#tempPre button").forEach(b=>b.classList.toggle("on",+b.dataset.temp===c.temp));
+  document.querySelectorAll("#maxPre button").forEach(b=>b.classList.toggle("on",+b.dataset.max===c.max));
+}
+function renderBudget(){
+  const c=S.cfg,inT=convEstimate()+estTokens($("#prompt").value),tot=inT+c.max,pct=tot/c.tpm*100,n=Math.floor(c.tpm/Math.max(1,tot));
+  $("#tpm").value=c.tpm;const b=$("#tpmBar");b.style.width=Math.min(100,pct)+"%";b.style.background=pct>100?"var(--err)":pct>70?"var(--warn)":"var(--accent)";
+  $("#tpmNote").textContent=pct>100?`One request could use ~${fmt(tot)} tokens, over your ${fmt(c.tpm)}/min limit. Lower max tokens or clear the conversation.`:`Worst case ~${fmt(tot)} per request (~${fmt(inT)} in + ${fmt(c.max)} out). About ${n} request${n===1?"":"s"} per minute.`;
+}
+function renderAll(){renderSessions();renderChat();renderConfig();renderAnalysis();renderMetrics();renderInspector();renderBudget();refreshConn()}
+
+/* ===== 17. EVENTS ===== */
+function patch(k,v){S.cfg[k]=v;saveAll();renderInspector();renderBudget();renderCaps()}
+function autoGrow(){const t=$("#prompt");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,200)+"px"}
+function openModal(html){$("#modalBody").innerHTML=html+`<div style="text-align:right;margin-top:10px"><button class="btn" id="closeM">Close</button></div>`;$("#modal").classList.add("on");$("#closeM").onclick=()=>$("#modal").classList.remove("on")}
+function bind(){
+  $("#sendBtn").onclick=()=>send();$("#stopBtn").onclick=stop;
+  $("#prompt").addEventListener("input",()=>{autoGrow();renderAnalysis();renderInspector();renderBudget()});
+  $("#prompt").addEventListener("keydown",e=>{
+    if(e.key==="Enter"&&(!e.shiftKey||e.metaKey||e.ctrlKey)){e.preventDefault();send()}
+  });
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("#modal").classList.contains("on"))$("#modal").classList.remove("on");else stop()}});
+  $("#modal").onclick=e=>{if(e.target.id==="modal")$("#modal").classList.remove("on")};
+  document.addEventListener("click",e=>{
+    const g=k=>e.target.closest(`[${k}]`);
+    let el;
+    if(el=g("data-sugg")){$("#prompt").value=el.dataset.sugg;autoGrow();renderAnalysis();renderInspector();$("#prompt").focus()}
+    else if(el=g("data-del")){e.stopPropagation();delSession(el.dataset.del)}
+    else if(el=g("data-delexp")){e.stopPropagation();S.experiments=S.experiments.filter(x=>x.id!==el.dataset.delexp);saveAll();renderSessions()}
+    else if(el=g("data-sid")){S.cur=el.dataset.sid;saveAll();renderAll();$("#app").classList.remove("sb-open")}
+    else if(el=g("data-eid")){const x=S.experiments.find(v=>v.id===el.dataset.eid);if(x){S.cfg={...DEF_CFG,...x.cfg};saveAll();renderAll();toast("Experiment loaded")}}
+    else if(el=g("data-temp")){patch("temp",+el.dataset.temp);renderConfig()}
+    else if(el=g("data-max")){patch("max",+el.dataset.max);renderConfig()}
+    else if(el=g("data-eff")){patch("effort",el.dataset.eff)}
+    else if(el=g("data-rmstop")){patch("stop",S.cfg.stop.filter(x=>x!==el.dataset.rmstop));renderConfig()}
+    else if(el=g("data-cp")){copy(sess().messages[+el.dataset.cp].content,"Response copied")}
+    else if(el=g("data-code")){copy(decodeURIComponent(el.dataset.code),"Code copied")}
+  });
+  $("#msgs").addEventListener("keydown",()=>{});
+  $("#newSess").onclick=()=>newSession();
+  $("#saveExp").onclick=saveExperiment;
+  $("#sbToggle").onclick=()=>{$("#app").classList.toggle("sb-collapsed");$("#sbToggle").style.transform=$("#app").classList.contains("sb-collapsed")?"rotate(180deg)":""};
+  $("#sbOpen").onclick=()=>$("#app").classList.toggle("sb-open");
+  $("#cfToggle").onclick=()=>$("#app").classList.toggle("cf-collapsed");
+  $("#navPlay").onclick=()=>{$("#prompt").focus();$("#app").classList.remove("sb-open")};
+  $("#clearBtn").onclick=()=>{if(S.busy)stop();sess().messages=[];sess().metrics=[];saveAll();renderAll();toast("Conversation cleared")};
+  $("#resetBtn").onclick=()=>{if(S.busy)stop();sess().messages=[];sess().metrics=[];S.cfg={...DEF_CFG};saveAll();renderAll();toast("Conversation and settings reset")};
+  $("#sessName").oninput=e=>{sess().name=e.target.value||"Untitled";saveAll();renderSessions()};
+  $("#provider").onchange=e=>{const p=PROVIDERS[e.target.value];S.cfg.provider=e.target.value;S.cfg.endpoint=p.url;S.cfg.model=p.models[0].id;S.cfg.search=S.cfg.reason=false;S.conn="idle";saveAll();renderAll()};
+  const setModel=v=>{S.cfg.model=v;S.conn="idle";saveAll();renderAll()};
+  $("#model").onchange=e=>setModel(e.target.value);$("#modelTop").onchange=e=>setModel(e.target.value);
+  $("#endpoint").oninput=e=>{patch("endpoint",e.target.value.trim());S.conn="idle"};
+  $("#apiKey").oninput=e=>{S.apiKey=e.target.value.trim();S.conn="idle";persistKey();refreshConn()};
+  $("#showKey").onclick=()=>{const k=$("#apiKey");k.type=k.type==="password"?"text":"password"};
+  $("#clearKey").onclick=()=>{S.apiKey="";$("#apiKey").value="";$("#remember").checked=false;try{sessionStorage.removeItem("nova.key")}catch{}S.conn="idle";refreshConn();toast("API key cleared")};
+  $("#remember").onchange=persistKey;
+  $("#system").oninput=e=>{patch("system",e.target.value);$("#sysCount").textContent=e.target.value.length+" characters (~"+estTokens(e.target.value)+" tokens)";renderMetrics()};
+  $("#sysReset").onclick=()=>{patch("system",DEF_SYS);renderConfig()};
+  $("#sysClear").onclick=()=>{patch("system","");renderConfig()};
+  $("#temp").oninput=e=>{patch("temp",+e.target.value);$("#tempV").textContent=(+e.target.value).toFixed(2)};
+  $("#maxTok").oninput=e=>{patch("max",+e.target.value);$("#maxNum").value=e.target.value};
+  $("#maxNum").onchange=e=>{const v=Math.max(1,Math.min(32768,parseInt(e.target.value)||1024));patch("max",v);renderConfig()};
+  $("#stop").onchange=e=>{const a=e.target.value.split(",").map(x=>x.trim()).filter(Boolean);if(a.length>4)toast("Only the first 4 stop sequences are used","err");patch("stop",[...new Set(a)].slice(0,4));renderConfig()};
+  $("#search").onchange=e=>patch("search",e.target.checked);
+  $("#reason").onchange=e=>patch("reason",e.target.checked);
+  $("#stream").onchange=e=>patch("stream",e.target.checked);
+  $("#analysis").addEventListener("toggle",e=>{const id=e.target.dataset?.rid;if(id)e.target.open?OPEN.add(id):OPEN.delete(id)},true);
+  $("#tpm").onchange=e=>patch("tpm",Math.max(100,+e.target.value||6000));
+  document.querySelectorAll(".tabs button[data-t]").forEach(b=>b.onclick=()=>{S.codeTab=b.dataset.t;document.querySelectorAll(".tabs button[data-t]").forEach(x=>x.classList.toggle("on",x===b));renderInspector()});
+  $("#copyCode").onclick=()=>copy(genCode()[S.codeTab],"Code copied (key placeholder only)");
+  $("#navDocs").onclick=()=>openModal(`<h3>Documentation</h3><p><b>Quick start.</b> Choose a provider, paste an API key, pick a model, and send a prompt. Requests go straight from your browser to the endpoint shown in the inspector.</p><ul><li><b>Temperature</b> controls randomness (0 to 2).</li><li><b>Max tokens</b> caps output length.</li><li><b>Stop sequences</b> end generation when matched (max 4).</li><li><b>Web search</b> and <b>reasoning</b> are only available on models that support them, and are only sent to those models.</li><li><b>Inspector</b> shows the exact request. The key is never included.</li><li><b>Metrics</b> show N/A when the provider does not report a value.</li></ul><p>Shortcuts: Enter sends, Shift+Enter adds a line, Esc stops generation.</p>`);
+  $("#navSet").onclick=()=>openModal(`<h3>Settings</h3><p>Sessions, experiments and non-sensitive settings are stored in this browser's localStorage. API keys never are.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn danger" id="wipe">Delete all sessions and experiments</button><button class="btn" id="defaults">Restore default settings</button></div>`);
+  $("#modalBody").addEventListener("click",e=>{
+    if(e.target.id==="wipe"){S.sessions=[];S.experiments=[];newSession(true);saveAll();renderAll();$("#modal").classList.remove("on");toast("All data deleted")}
+    if(e.target.id==="defaults"){S.cfg={...DEF_CFG};saveAll();renderAll();$("#modal").classList.remove("on");toast("Defaults restored")}
+  });
+  window.addEventListener("online",()=>toast("Back online"));window.addEventListener("offline",()=>toast("You are offline","err"));
+}
+function persistKey(){
+  try{if($("#remember").checked&&S.apiKey)sessionStorage.setItem("nova.key",S.apiKey);else sessionStorage.removeItem("nova.key")}catch{}
+}
+
+/* ===== 18. INIT ===== */
+loadAll();bind();renderAll();
+if(window.innerWidth>1100)$("#app").classList.remove("cf-collapsed");
+if(S.apiKey)$("#apiKey").value=S.apiKey;
+</script>
+</body>
+</html>
